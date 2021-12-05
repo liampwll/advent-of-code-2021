@@ -1,0 +1,31 @@
+#lang racket
+
+(define (inclusive-range2 a b)
+  (if (<= a b)
+      (inclusive-range a b)
+      (inclusive-range a b -1)))
+
+(let* ((raw-lines (file->lines "5.txt"))
+       (coords (map (lambda (x) (map (lambda (y) (map string->number (string-split y ","))) x)) (map (lambda (x) (string-split x " -> ")) raw-lines)))
+       (filtered-straight-coords (filter (lambda (x) (or (equal? (caar x) (caadr x)) (equal? (cadar x) (cadadr x)))) coords))
+       (filtered-diag-coords (filter (lambda (x) (not (or (equal? (caar x) (caadr x)) (equal? (cadar x) (cadadr x))))) coords))
+       (straight-points (foldl append '() (map (lambda (x) (cartesian-product
+                                                            (inclusive-range2 (caar x) (caadr x))
+                                                            (inclusive-range2 (cadar x) (cadadr x))))
+                                               filtered-straight-coords)))
+       (diag-points (foldl append '() (map (lambda (x) (map list
+                                                            (inclusive-range2 (caar x) (caadr x))
+                                                            (inclusive-range2 (cadar x) (cadadr x))))
+                                           filtered-diag-coords)))
+       (straight-point-counts (let ((h (make-hash)))
+                                (for-each (lambda (x) (hash-update! h x (lambda (y) (+ y 1)) 0)) straight-points)
+                                h))
+       (all-point-counts (let ((h (hash-copy straight-point-counts)))
+                           (for-each (lambda (x) (hash-update! h x (lambda (y) (+ y 1)) 0)) diag-points)
+                           h))
+       (straight-duplicate-points (map car (filter (lambda (x) (> (cdr x) 1)) (hash->list straight-point-counts))))
+       (all-duplicate-points (map car (filter (lambda (x) (> (cdr x) 1)) (hash->list all-point-counts)))))
+  (display (length straight-duplicate-points))
+  (display "\n")
+  (display (length all-duplicate-points))
+  (display "\n"))
